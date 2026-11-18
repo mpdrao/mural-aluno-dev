@@ -1,0 +1,13 @@
+<resources>
+    <color name="if_green">#2F9E41</color>
+    <color name="if_green_dark">#1E6B2C</color>
+    <color name="if_green_light">#E8F5E9</color>
+    <color name="if_red">#C8191E</color>
+    <color name="if_red_light">#FFEBEE</color>
+    <color name="if_amber">#E65100</color>
+    <color name="if_amber_light">#FFF3E0</color>
+    <color name="if_gray">#757575</color>
+    <color name="if_gray_light">#F5F5F5</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#212121</color>
+</resources>

@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.IFSIGARD" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#2F9E41</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
+    </style>
+</resources>
