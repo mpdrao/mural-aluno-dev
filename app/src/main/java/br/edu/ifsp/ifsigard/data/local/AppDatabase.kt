@@ -77,11 +77,11 @@ abstract class AppDatabase : RoomDatabase() {
 
             if (usuarioDao.count() == 0) {
                 val usuarios = listOf(
-                    Usuario(id = 1, nome = "Lucas Silva", email = "lucas.silva@aluno.if.edu.br", senha = "123", perfil = PerfilUsuario.ALUNO),
-                    Usuario(id = 2, nome = "Prof. Carlos Alberto", email = "carlos.alberto@if.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR),
-                    Usuario(id = 3, nome = "Profª. Ana Beatriz", email = "ana.beatriz@if.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR),
-                    Usuario(id = 4, nome = "CAE - Apoio ao Estudante", email = "cae@if.edu.br", senha = "123", perfil = PerfilUsuario.CAE),
-                    Usuario(id = 5, nome = "Coordenação BCC", email = "coordenacao.bcc@if.edu.br", senha = "123", perfil = PerfilUsuario.COORDENACAO)
+                    Usuario(id = 1, nome = "Lucas Silva", email = "lucas.silva@aluno.ifsp.edu.br", senha = "123", perfil = PerfilUsuario.ALUNO),
+                    Usuario(id = 2, nome = "Prof. Carlos Alberto", email = "carlos.alberto@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR),
+                    Usuario(id = 3, nome = "Profª. Ana Beatriz", email = "ana.beatriz@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR),
+                    Usuario(id = 4, nome = "CAE - Apoio ao Estudante", email = "cae@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.CAE),
+                    Usuario(id = 5, nome = "Coordenação BCC", email = "coordenacao.bcc@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.COORDENACAO)
                 )
                 usuarioDao.insertAll(usuarios)
             }

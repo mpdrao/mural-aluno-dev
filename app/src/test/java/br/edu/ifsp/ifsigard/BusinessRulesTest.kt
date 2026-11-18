@@ -27,26 +27,32 @@ class BusinessRulesTest {
     // RN01: Validacao de dominio institucional
     @Test
     fun testRN01_emailInstitucionalValido() {
-        val emailAluno = "lucas.silva@aluno.if.edu.br"
-        val emailProfessor = "carlos.alberto@if.edu.br"
+        val emailAluno = "lucas.silva@aluno.ifsp.edu.br"
+        val emailProfessor = "carlos.alberto@ifsp.edu.br"
+        val emailCae = "cae@ifsp.edu.br"
+        val emailCoordenacao = "coordenacao.bcc@ifsp.edu.br"
         val emailInvalido = "usuario@gmail.com"
 
-        val isValidoAluno = emailAluno.endsWith("@aluno.if.edu.br") || emailAluno.endsWith("@if.edu.br")
-        val isValidoProfessor = emailProfessor.endsWith("@aluno.if.edu.br") || emailProfessor.endsWith("@if.edu.br")
-        val isValidoGmail = emailInvalido.endsWith("@aluno.if.edu.br") || emailInvalido.endsWith("@if.edu.br")
+        val isValidoAluno = emailAluno.endsWith("@aluno.ifsp.edu.br") || emailAluno.endsWith("@ifsp.edu.br")
+        val isValidoProfessor = emailProfessor.endsWith("@aluno.ifsp.edu.br") || emailProfessor.endsWith("@ifsp.edu.br")
+        val isValidoCae = emailCae.endsWith("@aluno.ifsp.edu.br") || emailCae.endsWith("@ifsp.edu.br")
+        val isValidoCoordenacao = emailCoordenacao.endsWith("@aluno.ifsp.edu.br") || emailCoordenacao.endsWith("@ifsp.edu.br")
+        val isValidoGmail = emailInvalido.endsWith("@aluno.ifsp.edu.br") || emailInvalido.endsWith("@ifsp.edu.br")
 
         assertTrue(isValidoAluno)
         assertTrue(isValidoProfessor)
+        assertTrue(isValidoCae)
+        assertTrue(isValidoCoordenacao)
         assertFalse(isValidoGmail)
     }
 
     // RN01 & RN02: Perfil do usuario e permissao de publicacao
     @Test
     fun testRN02_apenasServidorPodePublicar() {
-        val aluno = Usuario(id = 1, nome = "Lucas", email = "lucas@aluno.if.edu.br", senha = "123", perfil = PerfilUsuario.ALUNO)
-        val professor = Usuario(id = 2, nome = "Carlos", email = "carlos@if.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR)
-        val cae = Usuario(id = 3, nome = "CAE", email = "cae@if.edu.br", senha = "123", perfil = PerfilUsuario.CAE)
-        val coordenacao = Usuario(id = 4, nome = "Coord", email = "coord@if.edu.br", senha = "123", perfil = PerfilUsuario.COORDENACAO)
+        val aluno = Usuario(id = 1, nome = "Lucas", email = "lucas@aluno.ifsp.edu.br", senha = "123", perfil = PerfilUsuario.ALUNO)
+        val professor = Usuario(id = 2, nome = "Carlos", email = "carlos@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR)
+        val cae = Usuario(id = 3, nome = "CAE", email = "cae@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.CAE)
+        val coordenacao = Usuario(id = 4, nome = "Coord", email = "coord@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.COORDENACAO)
 
         assertFalse("Aluno nao deve ser considerado servidor", aluno.isServidor())
         assertTrue("Professor deve ser servidor", professor.isServidor())

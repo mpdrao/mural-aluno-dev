@@ -27,8 +27,8 @@ class MuralRepository(private val database: AppDatabase) {
         val emailTrimmed = email.trim().lowercase(Locale.ROOT)
         
         // RN01: Validacao de dominio institucional
-        if (!emailTrimmed.endsWith("@aluno.if.edu.br") && !emailTrimmed.endsWith("@if.edu.br")) {
-            return Result.failure(IllegalArgumentException("E-mail deve ser institucional (@aluno.if.edu.br ou @if.edu.br)"))
+        if (!emailTrimmed.endsWith("@aluno.ifsp.edu.br") && !emailTrimmed.endsWith("@ifsp.edu.br")) {
+            return Result.failure(IllegalArgumentException("E-mail deve ser institucional (@aluno.ifsp.edu.br ou @ifsp.edu.br)"))
         }
 
         val usuario = usuarioDao.findByEmail(emailTrimmed)

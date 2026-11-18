@@ -87,11 +87,11 @@ app/src/test/
 
 Todos os usuários abaixo possuem a senha padrão `123`:
 
-- **Aluno**: `lucas.silva@aluno.if.edu.br` (perfil Aluno - apenas consulta)
-- **Professor 1**: `ana.beatriz@if.edu.br` (perfil Professor - cria e gerencia seus avisos)
-- **Professor 2**: `carlos.alberto@if.edu.br` (perfil Professor - cria e gerencia seus avisos)
-- **CAE**: `cae@if.edu.br` (perfil CAE - Apoio ao Estudante)
-- **Coordenação**: `coordenacao.bcc@if.edu.br` (perfil Coordenação BCC)
+- **Aluno**: `lucas.silva@aluno.ifsp.edu.br` (perfil Aluno - apenas consulta)
+- **Professor 1**: `ana.beatriz@ifsp.edu.br` (perfil Professor - cria e gerencia seus avisos)
+- **Professor 2**: `carlos.alberto@ifsp.edu.br` (perfil Professor - cria e gerencia seus avisos)
+- **CAE**: `cae@ifsp.edu.br` (perfil CAE - Apoio ao Estudante)
+- **Coordenação**: `coordenacao.bcc@ifsp.edu.br` (perfil Coordenação BCC)
 
 Na tela de Login, há um painel de atalhos rápidos ("Quem é quem") para preencher as credenciais de teste com um toque.
 
