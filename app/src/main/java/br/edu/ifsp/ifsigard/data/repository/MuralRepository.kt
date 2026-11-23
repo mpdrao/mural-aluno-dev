@@ -1,20 +1,24 @@
 package br.edu.ifsp.ifsigard.data.repository
 
 import br.edu.ifsp.ifsigard.data.entity.Aviso
-import br.edu.ifsp.ifsigard.data.entity.PerfilUsuario
 import br.edu.ifsp.ifsigard.data.entity.TipoAviso
 import br.edu.ifsp.ifsigard.data.entity.Turma
 import br.edu.ifsp.ifsigard.data.entity.Usuario
 import br.edu.ifsp.ifsigard.data.local.AppDatabase
+import br.edu.ifsp.ifsigard.util.DateUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.text.SimpleDateFormat
-import java.util.Date
+import kotlinx.coroutines.launch
 import java.util.Locale
 
-class MuralRepository(private val database: AppDatabase) {
+class MuralRepository(
+    private val database: AppDatabase,
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+) {
 
     private val usuarioDao = database.usuarioDao()
     private val turmaDao = database.turmaDao()
@@ -23,19 +27,47 @@ class MuralRepository(private val database: AppDatabase) {
     private val _currentUser = MutableStateFlow<Usuario?>(null)
     val currentUser: StateFlow<Usuario?> = _currentUser.asStateFlow()
 
+    init {
+        coroutineScope.launch {
+            AppDatabase.ensureSeeded(database)
+        }
+    }
+
     suspend fun login(email: String, senha: String): Result<Usuario> {
         val emailTrimmed = email.trim().lowercase(Locale.ROOT)
-        
-        // RN01: Validacao de dominio institucional
-        if (!emailTrimmed.endsWith("@aluno.ifsp.edu.br") && !emailTrimmed.endsWith("@ifsp.edu.br")) {
-            return Result.failure(IllegalArgumentException("E-mail deve ser institucional (@aluno.ifsp.edu.br ou @ifsp.edu.br)"))
+
+        // Garante que o banco contenha os dados do seed caso seja a primeira chamada
+        if (usuarioDao.count() == 0) {
+            AppDatabase.ensureSeeded(database)
         }
 
-        val usuario = usuarioDao.findByEmail(emailTrimmed)
-            ?: return Result.failure(IllegalArgumentException("Credenciais invalidas. Usuario nao cadastrado."))
+        // HU01 Caso 03: Campos vazios
+        if (emailTrimmed.isBlank()) {
+            return Result.failure(IllegalArgumentException("Informe o e-mail"))
+        }
+        if (senha.isBlank()) {
+            return Result.failure(IllegalArgumentException("Informe a senha"))
+        }
 
-        if (usuario.senha != senha) {
-            return Result.failure(IllegalArgumentException("Senha incorreta."))
+        // HU01 Caso 04: Formato invalido
+        if (!emailTrimmed.contains("@") || emailTrimmed.startsWith("@") || emailTrimmed.endsWith("@")) {
+            return Result.failure(IllegalArgumentException("E-mail inválido"))
+        }
+
+        // HU01 Caso 05 & RN01: Dominio institucional (@aluno.ifsp.edu.br, @ifsp.edu.br, @aluno.if.edu.br, @if.edu.br)
+        val isDominioInstitucional = emailTrimmed.endsWith("@aluno.ifsp.edu.br") ||
+                emailTrimmed.endsWith("@ifsp.edu.br") ||
+                emailTrimmed.endsWith("@aluno.if.edu.br") ||
+                emailTrimmed.endsWith("@if.edu.br")
+
+        if (!isDominioInstitucional) {
+            return Result.failure(IllegalArgumentException("Use seu e-mail institucional"))
+        }
+
+        // HU01 Caso 06 & RN01: Senha incorreta ou email nao cadastrado
+        val usuario = usuarioDao.findByEmail(emailTrimmed)
+        if (usuario == null || usuario.senha != senha) {
+            return Result.failure(IllegalArgumentException("E-mail ou senha incorretos"))
         }
 
         _currentUser.value = usuario
@@ -70,65 +102,69 @@ class MuralRepository(private val database: AppDatabase) {
     ): Result<Long> {
         // RN02: Apenas servidores podem publicar
         if (!autor.isServidor()) {
-            return Result.failure(IllegalStateException("Apenas servidores (Professores, CAE, Coordenacao) podem publicar avisos."))
+            return Result.failure(IllegalStateException("Apenas servidores (Professores, CAE, Coordenação) podem publicar avisos."))
         }
 
         // RN03: Campos obrigatorios
         if (turmaId <= 0 || turmaNome.isBlank()) {
-            return Result.failure(IllegalArgumentException("Selecione uma turma."))
+            return Result.failure(IllegalArgumentException("Selecione a turma"))
         }
         if (data.isBlank()) {
-            return Result.failure(IllegalArgumentException("A data e obrigatoria."))
+            return Result.failure(IllegalArgumentException("Informe a data"))
         }
-        if (horaInicio.isBlank() || horaFim.isBlank()) {
-            return Result.failure(IllegalArgumentException("Horarios de inicio e fim sao obrigatorios."))
+        if (horaInicio.isBlank()) {
+            return Result.failure(IllegalArgumentException("Informe o horário de início"))
+        }
+        if (horaFim.isBlank()) {
+            return Result.failure(IllegalArgumentException("Informe o horário de fim"))
         }
         if (mensagem.isBlank()) {
-            return Result.failure(IllegalArgumentException("A mensagem e obrigatoria."))
+            return Result.failure(IllegalArgumentException("Informe a mensagem"))
         }
         if (mensagem.length > 200) {
-            return Result.failure(IllegalArgumentException("A mensagem deve ter no maximo 200 caracteres."))
+            return Result.failure(IllegalArgumentException("A mensagem deve ter no máximo 200 caracteres"))
         }
         if (tipo == TipoAviso.TROCA_DE_AULA && substituto.isNullOrBlank()) {
-            return Result.failure(IllegalArgumentException("Para Troca de aula, informe o docente/disciplina substituta."))
+            return Result.failure(IllegalArgumentException("Informe a disciplina ou o professor substituto"))
         }
 
-        // RN04: Data nao pode ser anterior a data atual
-        val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val hojeStr = sdfDate.format(Date())
-        if (data < hojeStr) {
-            return Result.failure(IllegalArgumentException("A data do aviso nao pode ser anterior a hoje."))
+        val dataIso = DateUtils.normalizeToIso(data)
+
+        // RN04: Data nao pode estar no passado
+        if (DateUtils.isPastDate(dataIso)) {
+            return Result.failure(IllegalArgumentException("A data não pode estar no passado"))
         }
 
-        // RN05: Hora de fim deve ser estritamente maior que hora de inicio
+        // RN05: Hora de fim deve ser maior que inicio
         if (horaFim <= horaInicio) {
-            return Result.failure(IllegalArgumentException("O horario de termino deve ser posterior ao inicio."))
+            return Result.failure(IllegalArgumentException("A hora de fim deve ser maior que a de início"))
         }
 
         // RN09: Reposicao opcional
-        if (!reposicaoData.isNullOrBlank()) {
-            if (reposicaoData <= data) {
-                return Result.failure(IllegalArgumentException("A data de reposicao deve ser posterior a data do aviso."))
+        val reposicaoIso = reposicaoData?.let { DateUtils.normalizeToIso(it) }
+        if (!reposicaoIso.isNullOrBlank()) {
+            if (reposicaoIso <= dataIso) {
+                return Result.failure(IllegalArgumentException("A reposição deve ser posterior à data do aviso"))
             }
-            if (reposicaoData > "2026-12-18") {
-                return Result.failure(IllegalArgumentException("A data de reposicao deve ocorrer dentro do periodo letivo (ate 18/12/2026)."))
+            if (reposicaoIso > "2026-12-18") {
+                return Result.failure(IllegalArgumentException("A reposição deve ser até 18/12/2026"))
             }
         }
 
         // RN06: Calculo de aviso tardio (< 24h de antecedencia)
-        val isTardio = calcularAvisoTardio(data, horaInicio)
+        val isTardio = DateUtils.isAvisoTardio(dataIso, horaInicio)
 
         return if (id == 0L) {
             val novoAviso = Aviso(
                 tipo = tipo,
                 turmaId = turmaId,
                 turmaNome = turmaNome,
-                data = data,
+                data = dataIso,
                 horaInicio = horaInicio,
                 horaFim = horaFim,
                 mensagem = mensagem.trim(),
                 substituto = substituto?.trim()?.ifBlank { null },
-                reposicaoData = reposicaoData?.trim()?.ifBlank { null },
+                reposicaoData = reposicaoIso?.trim()?.ifBlank { null },
                 reposicaoHora = reposicaoHora?.trim()?.ifBlank { null },
                 autorId = autor.id,
                 autorNome = autor.nome,
@@ -139,23 +175,23 @@ class MuralRepository(private val database: AppDatabase) {
             Result.success(insertedId)
         } else {
             val avisoExistente = avisoDao.findById(id)
-                ?: return Result.failure(IllegalArgumentException("Aviso nao encontrado."))
+                ?: return Result.failure(IllegalArgumentException("Aviso não encontrado."))
 
             // RN07: Apenas autor pode editar
             if (avisoExistente.autorId != autor.id) {
-                return Result.failure(IllegalStateException("Apenas o autor do aviso pode edita-lo."))
+                return Result.failure(IllegalStateException("Apenas o autor do aviso pode editá-lo."))
             }
 
             val avisoAtualizado = avisoExistente.copy(
                 tipo = tipo,
                 turmaId = turmaId,
                 turmaNome = turmaNome,
-                data = data,
+                data = dataIso,
                 horaInicio = horaInicio,
                 horaFim = horaFim,
                 mensagem = mensagem.trim(),
                 substituto = substituto?.trim()?.ifBlank { null },
-                reposicaoData = reposicaoData?.trim()?.ifBlank { null },
+                reposicaoData = reposicaoIso?.trim()?.ifBlank { null },
                 reposicaoHora = reposicaoHora?.trim()?.ifBlank { null },
                 isTardio = isTardio
             )
@@ -171,18 +207,5 @@ class MuralRepository(private val database: AppDatabase) {
         }
         avisoDao.delete(aviso)
         return Result.success(Unit)
-    }
-
-    // RN06
-    fun calcularAvisoTardio(dataStr: String, horaInicioStr: String, agoraTimestamp: Long = System.currentTimeMillis()): Boolean {
-        return try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-            val aulaDate = sdf.parse("$dataStr $horaInicioStr") ?: return false
-            val diferencaMillis = aulaDate.time - agoraTimestamp
-            val vinteQuatroHorasMillis = 24 * 60 * 60 * 1000L
-            diferencaMillis < vinteQuatroHorasMillis
-        } catch (e: Exception) {
-            false
-        }
     }
 }

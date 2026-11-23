@@ -252,14 +252,8 @@ fun MuralScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Nenhum aviso encontrado",
+                            text = "Nenhum aviso para este dia",
                             style = MaterialTheme.typography.titleMedium,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Não há avisos cadastrados para os filtros selecionados.",
-                            style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary
                         )
                     }

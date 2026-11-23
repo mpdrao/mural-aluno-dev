@@ -9,26 +9,23 @@ import br.edu.ifsp.ifsigard.data.entity.Aviso
 import br.edu.ifsp.ifsigard.data.entity.Turma
 import br.edu.ifsp.ifsigard.data.entity.Usuario
 import br.edu.ifsp.ifsigard.data.repository.MuralRepository
+import br.edu.ifsp.ifsigard.util.DateUtils
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 enum class FiltroData(val label: String) {
     HOJE("Hoje"),
-    PROXIMOS_7_DIAS("Próximos 7 dias"),
+    AMANHA("Amanhã"),
     TODOS("Todos")
 }
 
 enum class FiltroTurno(val label: String) {
     TODOS("Todos"),
-    MANHA("Manhã"),
-    TARDE("Tarde"),
-    NOITE("Noite")
+    TARDE("13:30–17:10"),
+    NOITE("19:00–22:30"),
+    MANHA("07:00–12:00")
 }
 
 class MuralViewModel(private val repository: MuralRepository) : ViewModel() {
@@ -69,25 +66,23 @@ class MuralViewModel(private val repository: MuralRepository) : ViewModel() {
     }
 
     fun avisosFiltrados(): List<Aviso> {
-        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val hoje = sdf.format(Date())
-
-        val cal = Calendar.getInstance()
-        cal.add(Calendar.DAY_OF_YEAR, 7)
-        val daquiASeteDias = sdf.format(cal.time)
+        val hoje = DateUtils.todayIso()
+        val amanha = DateUtils.tomorrowIso()
 
         return todosAvisos.value.filter { aviso ->
-            // Filtro por turma
+            val dataIso = DateUtils.normalizeToIso(aviso.data)
+
+            // Filtro por turma (HU02 Caso 03)
             val matchTurma = filtroTurmaId == null || aviso.turmaId == filtroTurmaId
 
-            // Filtro por data (RN08)
+            // Filtro por data (HU02 Caso 01 & Caso 04)
             val matchData = when (filtroData) {
-                FiltroData.HOJE -> aviso.data == hoje
-                FiltroData.PROXIMOS_7_DIAS -> aviso.data >= hoje && aviso.data <= daquiASeteDias
+                FiltroData.HOJE -> dataIso == hoje
+                FiltroData.AMANHA -> dataIso == amanha
                 FiltroData.TODOS -> true
             }
 
-            // Filtro por turno / horario
+            // Filtro por turno / horario (HU02 Caso 05)
             val matchTurno = when (filtroTurno) {
                 FiltroTurno.TODOS -> true
                 FiltroTurno.MANHA -> aviso.horaInicio < "12:00"
@@ -113,11 +108,15 @@ class MuralViewModel(private val repository: MuralRepository) : ViewModel() {
             val result = repository.excluirAviso(aviso, usuario)
             avisoParaExcluir = null
             result.onSuccess {
-                feedbackMensagem = "Aviso excluído com sucesso."
+                feedbackMensagem = "Aviso excluído"
             }.onFailure { ex ->
                 feedbackMensagem = ex.message ?: "Erro ao excluir aviso."
             }
         }
+    }
+
+    fun definirFeedback(msg: String) {
+        feedbackMensagem = msg
     }
 
     fun limparFeedback() {

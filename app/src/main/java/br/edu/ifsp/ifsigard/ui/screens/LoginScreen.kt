@@ -123,11 +123,21 @@ fun LoginScreen(
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Email, contentDescription = null, tint = IfGreen)
                 },
-                isError = viewModel.errorMessage != null,
+                isError = viewModel.erroEmail != null,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 modifier = Modifier.fillMaxWidth()
             )
+            if (viewModel.erroEmail != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = viewModel.erroEmail ?: "",
+                    color = IfRed,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+            }
 
             Spacer(modifier = Modifier.height(14.dp))
 
@@ -148,17 +158,27 @@ fun LoginScreen(
                     }
                 },
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                isError = viewModel.errorMessage != null,
+                isError = viewModel.erroSenha != null,
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 modifier = Modifier.fillMaxWidth()
             )
+            if (viewModel.erroSenha != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = viewModel.erroSenha ?: "",
+                    color = IfRed,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Start
+                )
+            }
 
-            // Feedback de Erro (RN01)
-            if (viewModel.errorMessage != null) {
+            // Feedback de Erro Geral
+            if (viewModel.erroGeral != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = viewModel.errorMessage ?: "",
+                    text = viewModel.erroGeral ?: "",
                     color = IfRed,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.fillMaxWidth(),

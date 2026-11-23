@@ -9,13 +9,11 @@ import br.edu.ifsp.ifsigard.data.entity.TipoAviso
 import br.edu.ifsp.ifsigard.data.entity.Turma
 import br.edu.ifsp.ifsigard.data.entity.Usuario
 import br.edu.ifsp.ifsigard.data.repository.MuralRepository
+import br.edu.ifsp.ifsigard.util.DateUtils
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() {
 
@@ -34,13 +32,13 @@ class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() 
     var turmaNome by mutableStateOf("")
         private set
 
-    var data by mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()))
+    var data by mutableStateOf(DateUtils.todayBr())
         private set
 
-    var horaInicio by mutableStateOf("13:30")
+    var horaInicio by mutableStateOf("19:00")
         private set
 
-    var horaFim by mutableStateOf("15:10")
+    var horaFim by mutableStateOf("20:40")
         private set
 
     var mensagem by mutableStateOf("")
@@ -58,7 +56,7 @@ class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() 
     var reposicaoHora by mutableStateOf("")
         private set
 
-    // Validacoes individuais
+    // Erros de validacao individuais por campo (HU03)
     var erroTurma by mutableStateOf<String?>(null)
         private set
     var erroData by mutableStateOf<String?>(null)
@@ -81,6 +79,33 @@ class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() 
 
     val isEdicao: Boolean
         get() = avisoId > 0
+
+    fun resetForm() {
+        avisoId = 0L
+        tipo = TipoAviso.AULA_CANCELADA
+        turmaId = 0L
+        turmaNome = ""
+        data = DateUtils.todayBr()
+        horaInicio = "19:00"
+        horaFim = "20:40"
+        mensagem = ""
+        substituto = ""
+        temReposicao = false
+        reposicaoData = ""
+        reposicaoHora = ""
+        limparErros()
+    }
+
+    private fun limparErros() {
+        erroTurma = null
+        erroData = null
+        erroHoraInicio = null
+        erroHoraFim = null
+        erroMensagem = null
+        erroSubstituto = null
+        erroReposicao = null
+        erroGeral = null
+    }
 
     fun onTipoChange(novoTipo: TipoAviso) {
         tipo = novoTipo
@@ -141,14 +166,20 @@ class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() 
     }
 
     fun carregarAviso(id: Long) {
-        if (id <= 0) return
+        if (id <= 0) {
+            resetForm()
+            return
+        }
         avisoId = id
+        limparErros()
         viewModelScope.launch {
             val aviso = repository.getAvisoById(id) ?: return@launch
             tipo = aviso.tipo
             turmaId = aviso.turmaId
             turmaNome = aviso.turmaNome
-            data = aviso.data
+            data = DateUtils.formatForDisplay(aviso.data).let {
+                if (it == "Hoje" || it == "Amanhã") DateUtils.normalizeToIso(aviso.data) else it
+            }
             horaInicio = aviso.horaInicio
             horaFim = aviso.horaFim
             mensagem = aviso.mensagem
@@ -161,67 +192,71 @@ class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() 
 
     fun validar(): Boolean {
         var valido = true
-        erroTurma = null
-        erroData = null
-        erroHoraInicio = null
-        erroHoraFim = null
-        erroMensagem = null
-        erroSubstituto = null
-        erroReposicao = null
-        erroGeral = null
+        limparErros()
 
+        // HU03 Caso 04: Sem turma
         if (turmaId <= 0) {
-            erroTurma = "Selecione uma turma."
+            erroTurma = "Selecione a turma"
             valido = false
         }
 
+        // HU03 Caso 04: Sem data
         if (data.isBlank()) {
-            erroData = "Data é obrigatória."
+            erroData = "Informe a data"
             valido = false
         } else {
-            val hoje = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-            if (data < hoje) {
-                erroData = "Data não pode ser anterior a hoje."
+            // HU03 Caso 05: Data no passado (RN04)
+            val dataIso = DateUtils.normalizeToIso(data)
+            if (DateUtils.isPastDate(dataIso)) {
+                erroData = "A data não pode estar no passado"
                 valido = false
             }
         }
 
+        // HU03: Horarios obrigatorios
         if (horaInicio.isBlank()) {
-            erroHoraInicio = "Horário de início é obrigatório."
+            erroHoraInicio = "Informe o horário de início"
             valido = false
         }
 
         if (horaFim.isBlank()) {
-            erroHoraFim = "Horário de término é obrigatório."
+            erroHoraFim = "Informe o horário de fim"
             valido = false
         } else if (horaFim <= horaInicio) {
-            erroHoraFim = "Término deve ser maior que início."
+            // HU03 Caso 06: Horario invalido (RN05)
+            erroHoraFim = "A hora de fim deve ser maior que a de início"
             valido = false
         }
 
+        // HU03 Caso 04: Sem mensagem
         if (mensagem.isBlank()) {
-            erroMensagem = "Mensagem é obrigatória."
+            erroMensagem = "Informe a mensagem"
             valido = false
         } else if (mensagem.length > 200) {
-            erroMensagem = "Máximo de 200 caracteres."
+            erroMensagem = "A mensagem deve ter no máximo 200 caracteres"
             valido = false
         }
 
+        // HU03 Caso 03: Troca sem substituto (RN03)
         if (tipo == TipoAviso.TROCA_DE_AULA && substituto.isBlank()) {
-            erroSubstituto = "Informe o docente ou disciplina substituta."
+            erroSubstituto = "Informe a disciplina ou o professor substituto"
             valido = false
         }
 
+        // HU03 Caso 07: Reposicao opcional (RN09)
         if (temReposicao) {
             if (reposicaoData.isBlank()) {
-                erroReposicao = "Informe a data da reposição."
+                erroReposicao = "Informe a data da reposição"
                 valido = false
             } else {
-                if (reposicaoData <= data) {
-                    erroReposicao = "Data de reposição deve ser posterior à data do aviso."
+                val dataIso = DateUtils.normalizeToIso(data)
+                val repoIso = DateUtils.normalizeToIso(reposicaoData)
+
+                if (repoIso <= dataIso) {
+                    erroReposicao = "A reposição deve ser posterior à data do aviso"
                     valido = false
-                } else if (reposicaoData > "2026-12-18") {
-                    erroReposicao = "Data deve estar no período letivo (até 18/12/2026)."
+                } else if (repoIso > "2026-12-18") {
+                    erroReposicao = "A reposição deve ser até 18/12/2026"
                     valido = false
                 }
             }
@@ -230,31 +265,35 @@ class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() 
         return valido
     }
 
-    fun salvar(usuario: Usuario, onSuccess: () -> Unit) {
+    fun salvar(usuario: Usuario, onSuccess: (String) -> Unit) {
         if (!validar()) return
 
         viewModelScope.launch {
             isSaving = true
+            val dataIso = DateUtils.normalizeToIso(data)
+            val repoIso = if (temReposicao && reposicaoData.isNotBlank()) DateUtils.normalizeToIso(reposicaoData) else null
+
             val result = repository.salvarAviso(
                 id = avisoId,
                 tipo = tipo,
                 turmaId = turmaId,
                 turmaNome = turmaNome,
-                data = data,
+                data = dataIso,
                 horaInicio = horaInicio,
                 horaFim = horaFim,
                 mensagem = mensagem,
                 substituto = if (tipo == TipoAviso.TROCA_DE_AULA) substituto else null,
-                reposicaoData = if (temReposicao) reposicaoData else null,
-                reposicaoHora = if (temReposicao) reposicaoHora else null,
+                reposicaoData = repoIso,
+                reposicaoHora = if (temReposicao) reposicaoHora.ifBlank { null } else null,
                 autor = usuario
             )
             isSaving = false
 
             result.onSuccess {
-                onSuccess()
+                val mensagemFeedback = if (isEdicao) "Aviso atualizado" else "Aviso publicado"
+                onSuccess(mensagemFeedback)
             }.onFailure { ex ->
-                erroGeral = ex.message ?: "Erro ao salvar aviso."
+                erroGeral = ex.message ?: "Não foi possível salvar. Tente novamente."
             }
         }
     }

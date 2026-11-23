@@ -80,9 +80,10 @@ fun AvisoCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Linha de horario e autor
+            // Linha de data, horario e autor (HU02 Caso 02)
+            val dataExibicao = br.edu.ifsp.ifsigard.util.DateUtils.formatForDisplay(aviso.data)
             Text(
-                text = "${aviso.horaInicio}–${aviso.horaFim} · por ${aviso.autorNome}",
+                text = "$dataExibicao · ${aviso.horaInicio}–${aviso.horaFim} · por ${aviso.autorNome}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
             )

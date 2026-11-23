@@ -103,7 +103,10 @@ fun AppNavGraph(
                     usuarioLogado = user,
                     viewModel = formViewModel,
                     onNavigateBack = { navController.popBackStack() },
-                    onSaveSuccess = { navController.popBackStack() }
+                    onSaveSuccess = { feedbackMsg ->
+                        muralViewModel.definirFeedback(feedbackMsg)
+                        navController.popBackStack()
+                    }
                 )
             }
         }

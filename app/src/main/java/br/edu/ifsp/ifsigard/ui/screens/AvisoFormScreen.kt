@@ -60,7 +60,6 @@ import br.edu.ifsp.ifsigard.data.entity.Usuario
 import br.edu.ifsp.ifsigard.ui.theme.IfGrayBorder
 import br.edu.ifsp.ifsigard.ui.theme.IfGrayLight
 import br.edu.ifsp.ifsigard.ui.theme.IfGreen
-import br.edu.ifsp.ifsigard.ui.theme.IfGreenDark
 import br.edu.ifsp.ifsigard.ui.theme.IfRed
 import br.edu.ifsp.ifsigard.ui.theme.TextPrimary
 import br.edu.ifsp.ifsigard.ui.theme.TextSecondary
@@ -73,7 +72,7 @@ fun AvisoFormScreen(
     usuarioLogado: Usuario,
     viewModel: AvisoFormViewModel,
     onNavigateBack: () -> Unit,
-    onSaveSuccess: () -> Unit
+    onSaveSuccess: (String) -> Unit
 ) {
     val turmas by viewModel.turmas.collectAsState()
     var turmaMenuExpanded by remember { mutableStateOf(false) }
@@ -81,6 +80,8 @@ fun AvisoFormScreen(
     LaunchedEffect(avisoId) {
         if (avisoId > 0) {
             viewModel.carregarAviso(avisoId)
+        } else {
+            viewModel.resetForm()
         }
     }
 
@@ -200,7 +201,7 @@ fun AvisoFormScreen(
 
             // 3. Data do Aviso (RN04)
             Text(
-                text = "Data da ocorrência (YYYY-MM-DD) *",
+                text = "Data da ocorrência *",
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary,
                 fontSize = 14.sp
@@ -209,7 +210,7 @@ fun AvisoFormScreen(
             OutlinedTextField(
                 value = viewModel.data,
                 onValueChange = { viewModel.onDataChange(it) },
-                placeholder = { Text("2026-11-20") },
+                placeholder = { Text("Ex: 25/11/2026 ou 2026-11-25") },
                 isError = viewModel.erroData != null,
                 leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = IfGreen) },
                 singleLine = true,
@@ -229,7 +230,7 @@ fun AvisoFormScreen(
                     OutlinedTextField(
                         value = viewModel.horaInicio,
                         onValueChange = { viewModel.onHoraInicioChange(it) },
-                        placeholder = { Text("13:30") },
+                        placeholder = { Text("19:00") },
                         isError = viewModel.erroHoraInicio != null,
                         leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = IfGreen) },
                         singleLine = true,
@@ -247,7 +248,7 @@ fun AvisoFormScreen(
                     OutlinedTextField(
                         value = viewModel.horaFim,
                         onValueChange = { viewModel.onHoraFimChange(it) },
-                        placeholder = { Text("15:10") },
+                        placeholder = { Text("20:40") },
                         isError = viewModel.erroHoraFim != null,
                         leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = IfGreen) },
                         singleLine = true,
@@ -301,7 +302,7 @@ fun AvisoFormScreen(
                 OutlinedTextField(
                     value = viewModel.substituto,
                     onValueChange = { viewModel.onSubstitutoChange(it) },
-                    placeholder = { Text("Ex: Banco de Dados com Prof. Carlos, Lab 2") },
+                    placeholder = { Text("Ex: Banco de Dados - Prof. Carlos, Lab 2") },
                     isError = viewModel.erroSubstituto != null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -351,7 +352,7 @@ fun AvisoFormScreen(
                                 OutlinedTextField(
                                     value = viewModel.reposicaoData,
                                     onValueChange = { viewModel.onReposicaoDataChange(it) },
-                                    placeholder = { Text("2026-11-28") },
+                                    placeholder = { Text("Ex: 28/11/2026") },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -385,7 +386,7 @@ fun AvisoFormScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botao Salvar
+            // Botao Publicar / Salvar (HU03)
             Button(
                 onClick = {
                     viewModel.salvar(usuarioLogado, onSuccess = onSaveSuccess)
@@ -405,7 +406,7 @@ fun AvisoFormScreen(
                     )
                 } else {
                     Text(
-                        text = if (viewModel.isEdicao) "Salvar alterações" else "Publicar aviso",
+                        text = if (viewModel.isEdicao) "Salvar alterações" else "Publicar",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )

@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import br.edu.ifsp.ifsigard.data.entity.Usuario
 import br.edu.ifsp.ifsigard.data.repository.MuralRepository
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class AuthViewModel(private val repository: MuralRepository) : ViewModel() {
 
@@ -20,47 +21,89 @@ class AuthViewModel(private val repository: MuralRepository) : ViewModel() {
     var isLoading by mutableStateOf(false)
         private set
 
-    var errorMessage by mutableStateOf<String?>(null)
+    var erroEmail by mutableStateOf<String?>(null)
+        private set
+
+    var erroSenha by mutableStateOf<String?>(null)
+        private set
+
+    var erroGeral by mutableStateOf<String?>(null)
         private set
 
     val currentUser = repository.currentUser
 
     fun onEmailChange(newEmail: String) {
         email = newEmail
-        errorMessage = null
+        erroEmail = null
+        erroGeral = null
     }
 
     fun onSenhaChange(newSenha: String) {
         senha = newSenha
-        errorMessage = null
+        erroSenha = null
+        erroGeral = null
     }
 
     fun preencherCredenciais(seedEmail: String, seedSenha: String = "123") {
         email = seedEmail
         senha = seedSenha
-        errorMessage = null
+        erroEmail = null
+        erroSenha = null
+        erroGeral = null
     }
 
     fun login(onSuccess: (Usuario) -> Unit) {
-        if (email.isBlank()) {
-            errorMessage = "Informe o e-mail institucional."
-            return
+        var valido = true
+        erroEmail = null
+        erroSenha = null
+        erroGeral = null
+
+        val emailTrimmed = email.trim().lowercase(Locale.ROOT)
+
+        // HU01 Caso 03: Campos vazios
+        if (emailTrimmed.isBlank()) {
+            erroEmail = "Informe o e-mail"
+            valido = false
         }
         if (senha.isBlank()) {
-            errorMessage = "Informe a senha."
+            erroSenha = "Informe a senha"
+            valido = false
+        }
+
+        if (!valido) return
+
+        // HU01 Caso 04: Formato invalido
+        if (!emailTrimmed.contains("@") || emailTrimmed.startsWith("@") || emailTrimmed.endsWith("@")) {
+            erroEmail = "E-mail inválido"
+            return
+        }
+
+        // HU01 Caso 05 & RN01: Dominio institucional
+        val isDominioInstitucional = emailTrimmed.endsWith("@aluno.ifsp.edu.br") ||
+                emailTrimmed.endsWith("@ifsp.edu.br") ||
+                emailTrimmed.endsWith("@aluno.if.edu.br") ||
+                emailTrimmed.endsWith("@if.edu.br")
+
+        if (!isDominioInstitucional) {
+            erroEmail = "Use seu e-mail institucional"
             return
         }
 
         viewModelScope.launch {
             isLoading = true
-            errorMessage = null
-            val result = repository.login(email, senha)
+            val result = repository.login(emailTrimmed, senha)
             isLoading = false
 
             result.onSuccess { usuario ->
                 onSuccess(usuario)
             }.onFailure { ex ->
-                errorMessage = ex.message ?: "Erro ao autenticar."
+                val msg = ex.message ?: "Erro ao autenticar."
+                when {
+                    msg.contains("institucional") -> erroEmail = msg
+                    msg.contains("inválido") -> erroEmail = msg
+                    msg.contains("incorretos") -> erroEmail = msg
+                    else -> erroGeral = msg
+                }
             }
         }
     }
@@ -69,7 +112,9 @@ class AuthViewModel(private val repository: MuralRepository) : ViewModel() {
         repository.logout()
         email = ""
         senha = ""
-        errorMessage = null
+        erroEmail = null
+        erroSenha = null
+        erroGeral = null
         onLoggedOut()
     }
 }

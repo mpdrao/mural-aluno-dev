@@ -35,9 +35,11 @@ app/src/main/
 │   │   │   └── AvisoDao.kt                  # CRUD completo de avisos ordenados
 │   │   ├── local/
 │   │   │   ├── Converters.kt                # TypeConverters para Enums
-│   │   │   └── AppDatabase.kt               # Banco Room com carga automatica de dados iniciais (Seed)
+│   │   │   └── AppDatabase.kt               # Banco Room com carga garantida de dados iniciais (Seed)
 │   │   └── repository/
 │   │       └── MuralRepository.kt           # Centralizacao das regras de negocio e operacoes de dados
+│   ├── util/
+│   │   └── DateUtils.kt                     # Utilitario de normalizacao e calculo de datas e aviso tardio
 │   ├── ui/
 │   │   ├── theme/
 │   │   │   ├── Color.kt                     # Paleta oficial IFSP (Verde IF, Vermelho, Ambar, Cinza)
