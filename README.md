@@ -89,11 +89,14 @@ app/src/test/
 
 Todos os usuários abaixo possuem a senha padrão `123`:
 
+- **Aluna**: `maria@aluno.ifsp.edu.br` (perfil Aluno - apenas consulta)
 - **Aluno**: `lucas.silva@aluno.ifsp.edu.br` (perfil Aluno - apenas consulta)
-- **Professor 1**: `ana.beatriz@ifsp.edu.br` (perfil Professor - cria e gerencia seus avisos)
-- **Professor 2**: `carlos.alberto@ifsp.edu.br` (perfil Professor - cria e gerencia seus avisos)
+- **Professora 1**: `ana@ifsp.edu.br` (perfil Professor - cria e gerencia seus avisos)
+- **Professor 2**: `carlos@ifsp.edu.br` (perfil Professor - cria e gerencia seus avisos)
 - **CAE**: `cae@ifsp.edu.br` (perfil CAE - Apoio ao Estudante)
-- **Coordenação**: `coordenacao.bcc@ifsp.edu.br` (perfil Coordenação BCC)
+- **Coordenação**: `coordenacao@ifsp.edu.br` (perfil Coordenação BCC)
+
+> **Nota sobre Domínio Institucional Obrigatório**: O sistema valida obrigatoriamente os domínios `@ifsp.edu.br` (servidores) e `@aluno.ifsp.edu.br` (estudantes). Qualquer outro domínio é rejeitado.
 
 Na tela de Login, há um painel de atalhos rápidos ("Quem é quem") para preencher as credenciais de teste com um toque.
 

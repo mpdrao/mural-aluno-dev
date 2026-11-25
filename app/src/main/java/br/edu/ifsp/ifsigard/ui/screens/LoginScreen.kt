@@ -119,7 +119,7 @@ fun LoginScreen(
                 value = viewModel.email,
                 onValueChange = { viewModel.onEmailChange(it) },
                 label = { Text("E-mail institucional") },
-                placeholder = { Text("nome@aluno.ifsp.edu.br ou nome@ifsp.edu.br") },
+                placeholder = { Text("maria@aluno.ifsp.edu.br ou ana@ifsp.edu.br") },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Email, contentDescription = null, tint = IfGreen)
                 },
@@ -237,21 +237,21 @@ fun LoginScreen(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { viewModel.preencherCredenciais("lucas.silva@aluno.ifsp.edu.br") },
+                            onClick = { viewModel.preencherCredenciais("maria@aluno.ifsp.edu.br") },
                             modifier = Modifier.height(32.dp)
                         ) {
-                            Text(text = "Aluno", fontSize = 11.sp)
+                            Text(text = "Aluna (Maria)", fontSize = 11.sp)
                         }
 
                         OutlinedButton(
-                            onClick = { viewModel.preencherCredenciais("ana.beatriz@ifsp.edu.br") },
+                            onClick = { viewModel.preencherCredenciais("ana@ifsp.edu.br") },
                             modifier = Modifier.height(32.dp)
                         ) {
                             Text(text = "Profª. Ana", fontSize = 11.sp)
                         }
 
                         OutlinedButton(
-                            onClick = { viewModel.preencherCredenciais("carlos.alberto@ifsp.edu.br") },
+                            onClick = { viewModel.preencherCredenciais("carlos@ifsp.edu.br") },
                             modifier = Modifier.height(32.dp)
                         ) {
                             Text(text = "Prof. Carlos", fontSize = 11.sp)
@@ -265,7 +265,7 @@ fun LoginScreen(
                         }
 
                         OutlinedButton(
-                            onClick = { viewModel.preencherCredenciais("coordenacao.bcc@ifsp.edu.br") },
+                            onClick = { viewModel.preencherCredenciais("coordenacao@ifsp.edu.br") },
                             modifier = Modifier.height(32.dp)
                         ) {
                             Text(text = "Coordenação", fontSize = 11.sp)

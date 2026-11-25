@@ -20,12 +20,13 @@ class BusinessRulesTest {
     @Test
     fun testHU01_validacaoEmailInstitucional() {
         val emailAlunoSp = "lucas.silva@aluno.ifsp.edu.br"
-        val emailAlunoIf = "maria@aluno.if.edu.br"
-        val emailProfessorSp = "carlos.alberto@ifsp.edu.br"
-        val emailProfessorIf = "ana@if.edu.br"
+        val emailAlunoMaria = "maria@aluno.ifsp.edu.br"
+        val emailProfessorAna = "ana@ifsp.edu.br"
+        val emailProfessorCarlos = "carlos@ifsp.edu.br"
         val emailCae = "cae@ifsp.edu.br"
-        val emailCoordenacao = "coordenacao.bcc@ifsp.edu.br"
+        val emailCoordenacao = "coordenacao@ifsp.edu.br"
 
+        val emailOutroDominio = "maria@outro.edu.br"
         val emailSemArroba = "maria.aluno.ifsp.edu.br"
         val emailGmail = "maria@gmail.com"
         val emailVazio = ""
@@ -34,22 +35,22 @@ class BusinessRulesTest {
             val t = email.trim().lowercase(Locale.ROOT)
             if (t.isBlank()) return "Informe o e-mail"
             if (!t.contains("@") || t.startsWith("@") || t.endsWith("@")) return "E-mail inválido"
-            val isInst = t.endsWith("@aluno.ifsp.edu.br") || t.endsWith("@ifsp.edu.br") ||
-                    t.endsWith("@aluno.if.edu.br") || t.endsWith("@if.edu.br")
+            val isInst = t.endsWith("@aluno.ifsp.edu.br") || t.endsWith("@ifsp.edu.br")
             if (!isInst) return "Use seu e-mail institucional"
             return null
         }
 
         assertEquals(null, validarEmail(emailAlunoSp))
-        assertEquals(null, validarEmail(emailAlunoIf))
-        assertEquals(null, validarEmail(emailProfessorSp))
-        assertEquals(null, validarEmail(emailProfessorIf))
+        assertEquals(null, validarEmail(emailAlunoMaria))
+        assertEquals(null, validarEmail(emailProfessorAna))
+        assertEquals(null, validarEmail(emailProfessorCarlos))
         assertEquals(null, validarEmail(emailCae))
         assertEquals(null, validarEmail(emailCoordenacao))
 
         assertEquals("Informe o e-mail", validarEmail(emailVazio))
         assertEquals("E-mail inválido", validarEmail(emailSemArroba))
         assertEquals("Use seu e-mail institucional", validarEmail(emailGmail))
+        assertEquals("Use seu e-mail institucional", validarEmail(emailOutroDominio))
     }
 
     // HU01 Caso 01 & 02: Perfil do usuario e permissao de publicacao (RN02)
@@ -80,6 +81,7 @@ class BusinessRulesTest {
         assertEquals("13:30", ordenada[0].horaInicio)
         assertEquals("19:00", ordenada[1].horaInicio)
         assertEquals("20:50", ordenada[2].horaInicio)
+        assertEquals("Outro aviso", TipoAviso.OUTRO.label)
     }
 
     // HU02 Caso 04: Filtro por data (Hoje vs Amanha)
@@ -204,5 +206,93 @@ class BusinessRulesTest {
         assertFalse("Data de reposicao nao pode ser anterior a data do aviso", dataReposicaoAnterior > dataAviso)
         assertFalse("Data de reposicao nao pode ser igual a data do aviso", dataReposicaoIgual > dataAviso)
         assertFalse("Data de reposicao nao pode ser apos 18/12/2026 (HU03 Caso 07)", dataReposicaoAposFimPeriodo <= fimPeriodoLetivo)
+    }
+
+    // Divergencia 03 & HU02 Caso 05: Filtro por intervalo de horario (19:00–22:30)
+    @Test
+    fun testPonto03_filtroHorarioIntervalo19as22h30() {
+        val inicioMin = DateUtils.timeToMinutes("19:00")
+        val fimMax = DateUtils.timeToMinutes("22:30")
+
+        fun matchesIntervalo(horaInicio: String): Boolean {
+            val min = DateUtils.timeToMinutes(horaInicio)
+            return min in inicioMin..fimMax
+        }
+
+        assertTrue("19:00 inicia no intervalo", matchesIntervalo("19:00"))
+        assertTrue("20:40 inicia no intervalo", matchesIntervalo("20:40"))
+        assertTrue("22:30 inicia no intervalo", matchesIntervalo("22:30"))
+        assertFalse("13:30 (tarde) nao deve aparecer no intervalo da noite", matchesIntervalo("13:30"))
+        assertFalse("08:00 (manha) nao deve aparecer no intervalo da noite", matchesIntervalo("08:00"))
+        assertFalse("22:31 ultrapassa o intervalo", matchesIntervalo("22:31"))
+    }
+
+    // Divergencia 04 & RN06: Aviso tardio na edicao deve usar data/hora de publicacao original
+    @Test
+    fun testPonto04_avisoTardioPreservadoNaEdicao() {
+        val aulaTimestamp = 1764000000000L // Data/hora da aula
+        val publicadoOriginalmente = aulaTimestamp - (48 * 60 * 60 * 1000L) // Publicado 48h antes (nao tardio)
+        val momentoEdicao = aulaTimestamp - (2 * 60 * 60 * 1000L) // Editado 2h antes da aula
+
+        val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val sdfTime = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val aulaCal = Calendar.getInstance().apply { timeInMillis = aulaTimestamp }
+        val dataAula = sdfDate.format(aulaCal.time)
+        val horaAula = sdfTime.format(aulaCal.time)
+
+        // Se recalculasse com o momento da edicao (como antes do fix), ficaria 'true' incorretamente!
+        val calculoErradoComEdicao = DateUtils.isAvisoTardio(dataAula, horaAula, momentoEdicao)
+        // Calculo correto mantendo o timestamp original de publicacao
+        val calculoCorretoComPublicacaoOriginal = DateUtils.isAvisoTardio(dataAula, horaAula, publicadoOriginalmente)
+
+        assertTrue("Momento da edicao geraria selo tardio indevido", calculoErradoComEdicao)
+        assertFalse("Aviso original publicado 48h antes nao deve se tornar tardio na edicao", calculoCorretoComPublicacaoOriginal)
+    }
+
+    // Divergencia 05 & RN05: Validacao de horario numerico vs texto livre
+    @Test
+    fun testPonto05_validacaoNumericaHorarioEFormato() {
+        // String comparison trap: "9:00" vs "10:00"
+        val horaInicio = "9:00"
+        val horaFim = "10:00"
+
+        // Em comparacao lexicografica de string: "10:00" <= "9:00" e TRUE (falha de validacao!)
+        assertTrue("String comparison compara errado por ordem de caracteres ASCII", horaFim <= horaInicio)
+
+        // Com o fix numerico em DateUtils:
+        assertTrue("DateUtils compara numericamente os minutos", DateUtils.isHoraFimValida(horaInicio, horaFim))
+        assertEquals("09:00", DateUtils.normalizeTime("9:00"))
+        assertEquals("10:00", DateUtils.normalizeTime("10:00"))
+
+        // Formatos invalidos de texto livre
+        assertFalse("Texto livre 'abc' e rejeitado", DateUtils.isValidTime("abc"))
+        assertFalse("Horario invalido 25:00 e rejeitado", DateUtils.isValidTime("25:00"))
+        assertFalse("Minuto invalido 19:65 e rejeitado", DateUtils.isValidTime("19:65"))
+        assertTrue("Horario 19:00 e valido", DateUtils.isValidTime("19:00"))
+        assertTrue("Horario 09:00 e valido", DateUtils.isValidTime("09:00"))
+    }
+
+    // Divergencia 06: Validacao do horario de reposicao
+    @Test
+    fun testPonto06_validacaoHoraReposicao() {
+        val horaValida = "13:30"
+        val horaInvalida = "invalido"
+
+        assertTrue("Hora de reposicao 13:30 e valida", DateUtils.isValidTime(horaValida))
+        assertFalse("Hora de reposicao com texto livre e invalida", DateUtils.isValidTime(horaInvalida))
+    }
+
+    // Divergencia 02 & HU02: Filtro por data especifica (qualquer data)
+    @Test
+    fun testPonto02_filtroDataEspecifica() {
+        val aviso1 = Aviso(id = 1, tipo = TipoAviso.AULA_CANCELADA, turmaId = 1, turmaNome = "BCC", data = "2026-11-20", horaInicio = "19:00", horaFim = "20:40", mensagem = "M", autorId = 1, autorNome = "A")
+        val aviso2 = Aviso(id = 2, tipo = TipoAviso.AULA_CANCELADA, turmaId = 1, turmaNome = "BCC", data = "2026-11-28", horaInicio = "19:00", horaFim = "20:40", mensagem = "M", autorId = 1, autorNome = "A")
+        val avisos = listOf(aviso1, aviso2)
+
+        val dataSelecionada = "2026-11-28"
+        val filtrados = avisos.filter { DateUtils.normalizeToIso(it.data) == dataSelecionada }
+
+        assertEquals(1, filtrados.size)
+        assertEquals(2L, filtrados[0].id)
     }
 }

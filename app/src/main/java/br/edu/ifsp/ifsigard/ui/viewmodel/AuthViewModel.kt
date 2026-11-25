@@ -78,11 +78,9 @@ class AuthViewModel(private val repository: MuralRepository) : ViewModel() {
             return
         }
 
-        // HU01 Caso 05 & RN01: Dominio institucional
+        // HU01 Caso 05 & RN01: Dominio institucional obrigatorio (@aluno.ifsp.edu.br e @ifsp.edu.br)
         val isDominioInstitucional = emailTrimmed.endsWith("@aluno.ifsp.edu.br") ||
-                emailTrimmed.endsWith("@ifsp.edu.br") ||
-                emailTrimmed.endsWith("@aluno.if.edu.br") ||
-                emailTrimmed.endsWith("@if.edu.br")
+                emailTrimmed.endsWith("@ifsp.edu.br")
 
         if (!isDominioInstitucional) {
             erroEmail = "Use seu e-mail institucional"

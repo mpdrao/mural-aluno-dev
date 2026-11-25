@@ -1,5 +1,6 @@
 package br.edu.ifsp.ifsigard.ui.screens
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.AlertDialog
@@ -48,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,9 +64,11 @@ import br.edu.ifsp.ifsigard.ui.theme.IfRed
 import br.edu.ifsp.ifsigard.ui.theme.TextPrimary
 import br.edu.ifsp.ifsigard.ui.theme.TextSecondary
 import br.edu.ifsp.ifsigard.ui.viewmodel.FiltroData
-import br.edu.ifsp.ifsigard.ui.viewmodel.FiltroTurno
+import br.edu.ifsp.ifsigard.ui.viewmodel.FiltroHorario
 import br.edu.ifsp.ifsigard.ui.viewmodel.MuralViewModel
+import br.edu.ifsp.ifsigard.util.DateUtils
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -76,11 +81,26 @@ fun MuralScreen(
     onEditarAviso: (Long) -> Unit,
     onLogout: () -> Unit
 ) {
+    val context = LocalContext.current
     val turmas by viewModel.turmas.collectAsState()
     val avisos = viewModel.avisosFiltrados()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var turmaMenuExpanded by remember { mutableStateOf(false) }
+
+    fun abrirSeletorData(onDataSelecionada: (String) -> Unit) {
+        val cal = Calendar.getInstance()
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val iso = String.format(Locale.ROOT, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                onDataSelecionada(iso)
+            },
+            cal.get(Calendar.YEAR),
+            cal.get(Calendar.MONTH),
+            cal.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
 
     val dataFormatada = remember {
         val sdf = SimpleDateFormat("EEE, dd/MM", Locale("pt", "BR"))
@@ -204,34 +224,73 @@ fun MuralScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Filtro por Data (RN08: padrao "Hoje")
+                // Filtro por Data (RN08: padrao "Hoje", HU02: Amanha, Todos e Selecionar Data)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    FiltroData.values().forEach { opcao ->
-                        FilterChip(
-                            selected = viewModel.filtroData == opcao,
-                            onClick = { viewModel.setDataFiltro(opcao) },
-                            label = { Text(opcao.label, fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = IfGreenLight,
-                                selectedLabelColor = IfGreenDark
-                            )
+                    FilterChip(
+                        selected = viewModel.filtroData == FiltroData.HOJE,
+                        onClick = { viewModel.setDataFiltro(FiltroData.HOJE) },
+                        label = { Text("Hoje", fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = IfGreenLight,
+                            selectedLabelColor = IfGreenDark
                         )
-                    }
+                    )
+
+                    FilterChip(
+                        selected = viewModel.filtroData == FiltroData.AMANHA,
+                        onClick = { viewModel.setDataFiltro(FiltroData.AMANHA) },
+                        label = { Text("Amanhã", fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = IfGreenLight,
+                            selectedLabelColor = IfGreenDark
+                        )
+                    )
+
+                    val labelDataCustom = viewModel.dataEspecificaIso?.let {
+                        DateUtils.formatForDisplay(it)
+                    } ?: "Outra data..."
+
+                    FilterChip(
+                        selected = viewModel.filtroData == FiltroData.OUTRA_DATA,
+                        onClick = {
+                            abrirSeletorData { dataEscolhida ->
+                                viewModel.setDataFiltro(FiltroData.OUTRA_DATA, dataEscolhida)
+                            }
+                        },
+                        label = { Text(labelDataCustom, fontSize = 12.sp) },
+                        leadingIcon = {
+                            Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(14.dp))
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = IfGreenLight,
+                            selectedLabelColor = IfGreenDark
+                        )
+                    )
+
+                    FilterChip(
+                        selected = viewModel.filtroData == FiltroData.TODOS,
+                        onClick = { viewModel.setDataFiltro(FiltroData.TODOS) },
+                        label = { Text("Todos", fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = IfGreenLight,
+                            selectedLabelColor = IfGreenDark
+                        )
+                    )
 
                     Spacer(modifier = Modifier.size(8.dp))
 
-                    // Filtro por Turno
-                    FiltroTurno.values().forEach { turno ->
-                        if (turno != FiltroTurno.TODOS || viewModel.filtroTurno != FiltroTurno.TODOS) {
+                    // Filtro por Intervalo de Horário (HU02 Caso 05: 19:00–22:30 ou 13:30–17:10)
+                    FiltroHorario.values().forEach { horario ->
+                        if (horario != FiltroHorario.TODOS || viewModel.filtroHorario != FiltroHorario.TODOS) {
                             FilterChip(
-                                selected = viewModel.filtroTurno == turno,
-                                onClick = { viewModel.setTurnoFiltro(turno) },
-                                label = { Text(turno.label, fontSize = 12.sp) },
+                                selected = viewModel.filtroHorario == horario,
+                                onClick = { viewModel.setHorarioFiltro(horario) },
+                                label = { Text(horario.label, fontSize = 12.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = IfGreenLight,
                                     selectedLabelColor = IfGreenDark

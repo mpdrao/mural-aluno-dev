@@ -213,17 +213,23 @@ class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() 
             }
         }
 
-        // HU03: Horarios obrigatorios
+            // HU03: Horarios obrigatorios e validacao de formato (HH:mm)
         if (horaInicio.isBlank()) {
             erroHoraInicio = "Informe o horário de início"
+            valido = false
+        } else if (!DateUtils.isValidTime(horaInicio)) {
+            erroHoraInicio = "Horário de início inválido (HH:mm)"
             valido = false
         }
 
         if (horaFim.isBlank()) {
             erroHoraFim = "Informe o horário de fim"
             valido = false
-        } else if (horaFim <= horaInicio) {
-            // HU03 Caso 06: Horario invalido (RN05)
+        } else if (!DateUtils.isValidTime(horaFim)) {
+            erroHoraFim = "Horário de fim inválido (HH:mm)"
+            valido = false
+        } else if (erroHoraInicio == null && !DateUtils.isHoraFimValida(horaInicio, horaFim)) {
+            // HU03 Caso 06: Horario invalido (RN05) - comparacao numerica
             erroHoraFim = "A hora de fim deve ser maior que a de início"
             valido = false
         }
@@ -258,6 +264,9 @@ class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() 
                 } else if (repoIso > "2026-12-18") {
                     erroReposicao = "A reposição deve ser até 18/12/2026"
                     valido = false
+                } else if (reposicaoHora.isNotBlank() && !DateUtils.isValidTime(reposicaoHora)) {
+                    erroReposicao = "Horário de reposição inválido (use o formato HH:mm)"
+                    valido = false
                 }
             }
         }
@@ -272,6 +281,9 @@ class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() 
             isSaving = true
             val dataIso = DateUtils.normalizeToIso(data)
             val repoIso = if (temReposicao && reposicaoData.isNotBlank()) DateUtils.normalizeToIso(reposicaoData) else null
+            val hInicioNorm = DateUtils.normalizeTime(horaInicio)
+            val hFimNorm = DateUtils.normalizeTime(horaFim)
+            val hRepoNorm = if (temReposicao && reposicaoHora.isNotBlank()) DateUtils.normalizeTime(reposicaoHora) else null
 
             val result = repository.salvarAviso(
                 id = avisoId,
@@ -279,12 +291,12 @@ class AvisoFormViewModel(private val repository: MuralRepository) : ViewModel() 
                 turmaId = turmaId,
                 turmaNome = turmaNome,
                 data = dataIso,
-                horaInicio = horaInicio,
-                horaFim = horaFim,
+                horaInicio = hInicioNorm,
+                horaFim = hFimNorm,
                 mensagem = mensagem,
                 substituto = if (tipo == TipoAviso.TROCA_DE_AULA) substituto else null,
                 reposicaoData = repoIso,
-                reposicaoHora = if (temReposicao) reposicaoHora.ifBlank { null } else null,
+                reposicaoHora = hRepoNorm,
                 autor = usuario
             )
             isSaving = false

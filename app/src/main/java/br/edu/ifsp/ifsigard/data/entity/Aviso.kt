@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 enum class TipoAviso(val label: String) {
     AULA_CANCELADA("Aula cancelada"),
     TROCA_DE_AULA("Troca de aula"),
-    OUTRO("Outro")
+    OUTRO("Outro aviso")
 }
 
 @Entity(tableName = "avisos")

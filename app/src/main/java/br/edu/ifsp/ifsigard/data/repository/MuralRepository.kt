@@ -54,11 +54,9 @@ class MuralRepository(
             return Result.failure(IllegalArgumentException("E-mail inválido"))
         }
 
-        // HU01 Caso 05 & RN01: Dominio institucional (@aluno.ifsp.edu.br, @ifsp.edu.br, @aluno.if.edu.br, @if.edu.br)
+        // HU01 Caso 05 & RN01: Dominio institucional obrigatorio (@aluno.ifsp.edu.br e @ifsp.edu.br)
         val isDominioInstitucional = emailTrimmed.endsWith("@aluno.ifsp.edu.br") ||
-                emailTrimmed.endsWith("@ifsp.edu.br") ||
-                emailTrimmed.endsWith("@aluno.if.edu.br") ||
-                emailTrimmed.endsWith("@if.edu.br")
+                emailTrimmed.endsWith("@ifsp.edu.br")
 
         if (!isDominioInstitucional) {
             return Result.failure(IllegalArgumentException("Use seu e-mail institucional"))
@@ -135,13 +133,25 @@ class MuralRepository(
             return Result.failure(IllegalArgumentException("A data não pode estar no passado"))
         }
 
-        // RN05: Hora de fim deve ser maior que inicio
-        if (horaFim <= horaInicio) {
+        // Validacao de formato de horario
+        if (!DateUtils.isValidTime(horaInicio)) {
+            return Result.failure(IllegalArgumentException("Horário de início inválido. Use o formato HH:mm"))
+        }
+        if (!DateUtils.isValidTime(horaFim)) {
+            return Result.failure(IllegalArgumentException("Horário de fim inválido. Use o formato HH:mm"))
+        }
+
+        val horaInicioNorm = DateUtils.normalizeTime(horaInicio)
+        val horaFimNorm = DateUtils.normalizeTime(horaFim)
+
+        // RN05: Hora de fim deve ser estritamente maior que inicio numericamente
+        if (!DateUtils.isHoraFimValida(horaInicioNorm, horaFimNorm)) {
             return Result.failure(IllegalArgumentException("A hora de fim deve ser maior que a de início"))
         }
 
         // RN09: Reposicao opcional
         val reposicaoIso = reposicaoData?.let { DateUtils.normalizeToIso(it) }
+        var reposicaoHoraNorm: String? = null
         if (!reposicaoIso.isNullOrBlank()) {
             if (reposicaoIso <= dataIso) {
                 return Result.failure(IllegalArgumentException("A reposição deve ser posterior à data do aviso"))
@@ -149,26 +159,32 @@ class MuralRepository(
             if (reposicaoIso > "2026-12-18") {
                 return Result.failure(IllegalArgumentException("A reposição deve ser até 18/12/2026"))
             }
+            if (!reposicaoHora.isNullOrBlank()) {
+                if (!DateUtils.isValidTime(reposicaoHora)) {
+                    return Result.failure(IllegalArgumentException("Horário de reposição inválido. Use o formato HH:mm"))
+                }
+                reposicaoHoraNorm = DateUtils.normalizeTime(reposicaoHora)
+            }
         }
 
-        // RN06: Calculo de aviso tardio (< 24h de antecedencia)
-        val isTardio = DateUtils.isAvisoTardio(dataIso, horaInicio)
-
         return if (id == 0L) {
+            val agora = System.currentTimeMillis()
+            // RN06: Calculo de aviso tardio (< 24h de antecedencia) na publicacao
+            val isTardio = DateUtils.isAvisoTardio(dataIso, horaInicioNorm, agoraTimestamp = agora)
             val novoAviso = Aviso(
                 tipo = tipo,
                 turmaId = turmaId,
                 turmaNome = turmaNome,
                 data = dataIso,
-                horaInicio = horaInicio,
-                horaFim = horaFim,
+                horaInicio = horaInicioNorm,
+                horaFim = horaFimNorm,
                 mensagem = mensagem.trim(),
                 substituto = substituto?.trim()?.ifBlank { null },
                 reposicaoData = reposicaoIso?.trim()?.ifBlank { null },
-                reposicaoHora = reposicaoHora?.trim()?.ifBlank { null },
+                reposicaoHora = reposicaoHoraNorm ?: reposicaoHora?.trim()?.ifBlank { null },
                 autorId = autor.id,
                 autorNome = autor.nome,
-                publicadoEm = System.currentTimeMillis(),
+                publicadoEm = agora,
                 isTardio = isTardio
             )
             val insertedId = avisoDao.insert(novoAviso)
@@ -182,17 +198,20 @@ class MuralRepository(
                 return Result.failure(IllegalStateException("Apenas o autor do aviso pode editá-lo."))
             }
 
+            // RN06: Na edicao, o calculo de aviso tardio considera a hora original de publicacao (publicadoEm)
+            val isTardio = DateUtils.isAvisoTardio(dataIso, horaInicioNorm, agoraTimestamp = avisoExistente.publicadoEm)
+
             val avisoAtualizado = avisoExistente.copy(
                 tipo = tipo,
                 turmaId = turmaId,
                 turmaNome = turmaNome,
                 data = dataIso,
-                horaInicio = horaInicio,
-                horaFim = horaFim,
+                horaInicio = horaInicioNorm,
+                horaFim = horaFimNorm,
                 mensagem = mensagem.trim(),
                 substituto = substituto?.trim()?.ifBlank { null },
                 reposicaoData = reposicaoIso?.trim()?.ifBlank { null },
-                reposicaoHora = reposicaoHora?.trim()?.ifBlank { null },
+                reposicaoHora = reposicaoHoraNorm ?: reposicaoHora?.trim()?.ifBlank { null },
                 isTardio = isTardio
             )
             avisoDao.update(avisoAtualizado)

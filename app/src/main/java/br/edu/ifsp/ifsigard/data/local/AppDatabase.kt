@@ -74,31 +74,22 @@ abstract class AppDatabase : RoomDatabase() {
                 val turmaDao = database.turmaDao()
                 val avisoDao = database.avisoDao()
 
-                // 1. Usuarios (seed)
+                // 1. Usuarios (seed) - Dominios obrigatorios @ifsp.edu.br e @aluno.ifsp.edu.br
                 if (usuarioDao.count() == 0) {
                     val usuarios = listOf(
                         // Alunos
-                        Usuario(nome = "Lucas Silva", email = "lucas.silva@aluno.ifsp.edu.br", senha = "123", perfil = PerfilUsuario.ALUNO),
                         Usuario(nome = "Maria Oliveira", email = "maria@aluno.ifsp.edu.br", senha = "123", perfil = PerfilUsuario.ALUNO),
-                        Usuario(nome = "Lucas Silva (IF)", email = "lucas.silva@aluno.if.edu.br", senha = "123", perfil = PerfilUsuario.ALUNO),
-                        Usuario(nome = "Maria Oliveira (IF)", email = "maria@aluno.if.edu.br", senha = "123", perfil = PerfilUsuario.ALUNO),
+                        Usuario(nome = "Lucas Silva", email = "lucas.silva@aluno.ifsp.edu.br", senha = "123", perfil = PerfilUsuario.ALUNO),
 
                         // Professores
-                        Usuario(nome = "Profª. Ana Beatriz", email = "ana.beatriz@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR),
                         Usuario(nome = "Profª. Ana Beatriz", email = "ana@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR),
-                        Usuario(nome = "Profª. Ana Beatriz (IF)", email = "ana@if.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR),
-                        Usuario(nome = "Prof. Carlos Alberto", email = "carlos.alberto@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR),
                         Usuario(nome = "Prof. Carlos Alberto", email = "carlos@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR),
-                        Usuario(nome = "Prof. Carlos Alberto (IF)", email = "carlos@if.edu.br", senha = "123", perfil = PerfilUsuario.PROFESSOR),
 
                         // CAE
                         Usuario(nome = "CAE - Apoio ao Estudante", email = "cae@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.CAE),
-                        Usuario(nome = "CAE - Apoio ao Estudante (IF)", email = "cae@if.edu.br", senha = "123", perfil = PerfilUsuario.CAE),
 
                         // Coordenacao
-                        Usuario(nome = "Coordenação BCC", email = "coordenacao.bcc@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.COORDENACAO),
-                        Usuario(nome = "Coordenação BCC", email = "coordenacao@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.COORDENACAO),
-                        Usuario(nome = "Coordenação BCC (IF)", email = "coordenacao@if.edu.br", senha = "123", perfil = PerfilUsuario.COORDENACAO)
+                        Usuario(nome = "Coordenação BCC", email = "coordenacao@ifsp.edu.br", senha = "123", perfil = PerfilUsuario.COORDENACAO)
                     )
                     usuarioDao.insertAll(usuarios)
                 }
@@ -137,10 +128,10 @@ abstract class AppDatabase : RoomDatabase() {
 
                 // Se nao ha avisos cadastrados para a data atual, insere os 4 avisos especificos de teste da HU02
                 if (!temAvisosHoje) {
-                    val profAna = usuarioDao.findByEmail("ana.beatriz@ifsp.edu.br")
-                        ?: usuarioDao.findByEmail("ana@ifsp.edu.br")
-                    val profCarlos = usuarioDao.findByEmail("carlos.alberto@ifsp.edu.br")
-                        ?: usuarioDao.findByEmail("carlos@ifsp.edu.br")
+                    val profAna = usuarioDao.findByEmail("ana@ifsp.edu.br")
+                        ?: usuarioDao.findByEmail("ana.beatriz@ifsp.edu.br")
+                    val profCarlos = usuarioDao.findByEmail("carlos@ifsp.edu.br")
+                        ?: usuarioDao.findByEmail("carlos.alberto@ifsp.edu.br")
                     val caeUser = usuarioDao.findByEmail("cae@ifsp.edu.br")
 
                     val avisosSeed = listOf(
@@ -157,7 +148,7 @@ abstract class AppDatabase : RoomDatabase() {
                             reposicaoHora = "13:30",
                             autorId = profAna?.id ?: 5,
                             autorNome = profAna?.nome ?: "Profª. Ana Beatriz",
-                            isTardio = true // RN06
+                            isTardio = DateUtils.isAvisoTardio(hoje, "13:30") // RN06 calculado dinamicamente
                         ),
                         // HU02 Caso 01 - Aviso 2 de hoje (19:00): Aula cancelada ADS 1º sem
                         Aviso(

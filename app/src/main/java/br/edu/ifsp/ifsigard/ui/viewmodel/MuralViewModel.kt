@@ -18,15 +18,18 @@ import kotlinx.coroutines.launch
 enum class FiltroData(val label: String) {
     HOJE("Hoje"),
     AMANHA("Amanhã"),
+    OUTRA_DATA("Outra data"),
     TODOS("Todos")
 }
 
-enum class FiltroTurno(val label: String) {
+enum class FiltroHorario(val label: String) {
     TODOS("Todos"),
-    TARDE("13:30–17:10"),
     NOITE("19:00–22:30"),
-    MANHA("07:00–12:00")
+    TARDE("13:30–17:10")
 }
+
+// Compatibilidade retroativa
+typealias FiltroTurno = FiltroHorario
 
 class MuralViewModel(private val repository: MuralRepository) : ViewModel() {
 
@@ -44,8 +47,14 @@ class MuralViewModel(private val repository: MuralRepository) : ViewModel() {
     var filtroData by mutableStateOf(FiltroData.HOJE)
         private set
 
-    var filtroTurno by mutableStateOf(FiltroTurno.TODOS)
+    var dataEspecificaIso by mutableStateOf<String?>(null)
         private set
+
+    var filtroHorario by mutableStateOf(FiltroHorario.TODOS)
+        private set
+
+    val filtroTurno: FiltroHorario
+        get() = filtroHorario
 
     var avisoParaExcluir by mutableStateOf<Aviso?>(null)
         private set
@@ -57,12 +66,21 @@ class MuralViewModel(private val repository: MuralRepository) : ViewModel() {
         filtroTurmaId = turmaId
     }
 
-    fun setDataFiltro(filtro: FiltroData) {
+    fun setDataFiltro(filtro: FiltroData, dataIso: String? = null) {
         filtroData = filtro
+        if (filtro == FiltroData.OUTRA_DATA && dataIso != null) {
+            dataEspecificaIso = DateUtils.normalizeToIso(dataIso)
+        } else if (filtro != FiltroData.OUTRA_DATA) {
+            dataEspecificaIso = null
+        }
     }
 
-    fun setTurnoFiltro(filtro: FiltroTurno) {
-        filtroTurno = filtro
+    fun setHorarioFiltro(filtro: FiltroHorario) {
+        filtroHorario = filtro
+    }
+
+    fun setTurnoFiltro(filtro: FiltroHorario) {
+        filtroHorario = filtro
     }
 
     fun avisosFiltrados(): List<Aviso> {
@@ -75,22 +93,28 @@ class MuralViewModel(private val repository: MuralRepository) : ViewModel() {
             // Filtro por turma (HU02 Caso 03)
             val matchTurma = filtroTurmaId == null || aviso.turmaId == filtroTurmaId
 
-            // Filtro por data (HU02 Caso 01 & Caso 04)
+            // Filtro por data (HU02 Caso 01 & Caso 04 & Data personalizada)
             val matchData = when (filtroData) {
                 FiltroData.HOJE -> dataIso == hoje
                 FiltroData.AMANHA -> dataIso == amanha
+                FiltroData.OUTRA_DATA -> dataEspecificaIso != null && dataIso == dataEspecificaIso
                 FiltroData.TODOS -> true
             }
 
-            // Filtro por turno / horario (HU02 Caso 05)
-            val matchTurno = when (filtroTurno) {
-                FiltroTurno.TODOS -> true
-                FiltroTurno.MANHA -> aviso.horaInicio < "12:00"
-                FiltroTurno.TARDE -> aviso.horaInicio >= "12:00" && aviso.horaInicio < "18:00"
-                FiltroTurno.NOITE -> aviso.horaInicio >= "18:00"
+            // Filtro por intervalo de horario (HU02 Caso 05: 19:00–22:30 | So avisos que comecam nesse intervalo aparecem)
+            val matchHorario = when (filtroHorario) {
+                FiltroHorario.TODOS -> true
+                FiltroHorario.NOITE -> {
+                    val minInicio = DateUtils.timeToMinutes(aviso.horaInicio)
+                    minInicio in DateUtils.timeToMinutes("19:00")..DateUtils.timeToMinutes("22:30")
+                }
+                FiltroHorario.TARDE -> {
+                    val minInicio = DateUtils.timeToMinutes(aviso.horaInicio)
+                    minInicio in DateUtils.timeToMinutes("13:30")..DateUtils.timeToMinutes("17:10")
+                }
             }
 
-            matchTurma && matchData && matchTurno
+            matchTurma && matchData && matchHorario
         }.sortedWith(compareBy({ it.data }, { it.horaInicio }))
     }
 

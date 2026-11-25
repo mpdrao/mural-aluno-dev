@@ -1,5 +1,7 @@
 package br.edu.ifsp.ifsigard.ui.screens
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -64,6 +67,9 @@ import br.edu.ifsp.ifsigard.ui.theme.IfRed
 import br.edu.ifsp.ifsigard.ui.theme.TextPrimary
 import br.edu.ifsp.ifsigard.ui.theme.TextSecondary
 import br.edu.ifsp.ifsigard.ui.viewmodel.AvisoFormViewModel
+import br.edu.ifsp.ifsigard.util.DateUtils
+import java.util.Calendar
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,8 +80,52 @@ fun AvisoFormScreen(
     onNavigateBack: () -> Unit,
     onSaveSuccess: (String) -> Unit
 ) {
+    val context = LocalContext.current
     val turmas by viewModel.turmas.collectAsState()
     var turmaMenuExpanded by remember { mutableStateOf(false) }
+
+    fun abrirSeletorHora(horaAtual: String, onHoraSelecionada: (String) -> Unit) {
+        val cal = Calendar.getInstance()
+        var h = 19
+        var m = 0
+        if (DateUtils.isValidTime(horaAtual)) {
+            val parts = horaAtual.trim().split(":")
+            h = parts[0].toIntOrNull() ?: 19
+            m = parts[1].toIntOrNull() ?: 0
+        }
+        TimePickerDialog(
+            context,
+            { _, hourOfDay, minute ->
+                onHoraSelecionada(String.format(Locale.ROOT, "%02d:%02d", hourOfDay, minute))
+            },
+            h,
+            m,
+            true
+        ).show()
+    }
+
+    fun abrirSeletorData(dataAtual: String, onDataSelecionada: (String) -> Unit) {
+        val cal = Calendar.getInstance()
+        var ano = cal.get(Calendar.YEAR)
+        var mes = cal.get(Calendar.MONTH)
+        var dia = cal.get(Calendar.DAY_OF_MONTH)
+        val iso = DateUtils.normalizeToIso(dataAtual)
+        if (iso.matches(Regex("^\\d{4}-\\d{2}-\\d{2}$"))) {
+            val parts = iso.split("-")
+            ano = parts[0].toIntOrNull() ?: ano
+            mes = (parts[1].toIntOrNull() ?: (mes + 1)) - 1
+            dia = parts[2].toIntOrNull() ?: dia
+        }
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                onDataSelecionada(String.format(Locale.ROOT, "%04d-%02d-%02d", year, month + 1, dayOfMonth))
+            },
+            ano,
+            mes,
+            dia
+        ).show()
+    }
 
     LaunchedEffect(avisoId) {
         if (avisoId > 0) {
@@ -212,7 +262,11 @@ fun AvisoFormScreen(
                 onValueChange = { viewModel.onDataChange(it) },
                 placeholder = { Text("Ex: 25/11/2026 ou 2026-11-25") },
                 isError = viewModel.erroData != null,
-                leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = IfGreen) },
+                leadingIcon = {
+                    IconButton(onClick = { abrirSeletorData(viewModel.data) { viewModel.onDataChange(it) } }) {
+                        Icon(Icons.Default.DateRange, contentDescription = "Selecionar data", tint = IfGreen)
+                    }
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -232,7 +286,11 @@ fun AvisoFormScreen(
                         onValueChange = { viewModel.onHoraInicioChange(it) },
                         placeholder = { Text("19:00") },
                         isError = viewModel.erroHoraInicio != null,
-                        leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = IfGreen) },
+                        leadingIcon = {
+                            IconButton(onClick = { abrirSeletorHora(viewModel.horaInicio) { viewModel.onHoraInicioChange(it) } }) {
+                                Icon(Icons.Default.Schedule, contentDescription = "Selecionar hora início", tint = IfGreen)
+                            }
+                        },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
@@ -250,7 +308,11 @@ fun AvisoFormScreen(
                         onValueChange = { viewModel.onHoraFimChange(it) },
                         placeholder = { Text("20:40") },
                         isError = viewModel.erroHoraFim != null,
-                        leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, tint = IfGreen) },
+                        leadingIcon = {
+                            IconButton(onClick = { abrirSeletorHora(viewModel.horaFim) { viewModel.onHoraFimChange(it) } }) {
+                                Icon(Icons.Default.Schedule, contentDescription = "Selecionar hora término", tint = IfGreen)
+                            }
+                        },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
@@ -353,6 +415,11 @@ fun AvisoFormScreen(
                                     value = viewModel.reposicaoData,
                                     onValueChange = { viewModel.onReposicaoDataChange(it) },
                                     placeholder = { Text("Ex: 28/11/2026") },
+                                    trailingIcon = {
+                                        IconButton(onClick = { abrirSeletorData(viewModel.reposicaoData) { viewModel.onReposicaoDataChange(it) } }) {
+                                            Icon(Icons.Default.DateRange, contentDescription = "Selecionar data", tint = IfGreen)
+                                        }
+                                    },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -364,6 +431,11 @@ fun AvisoFormScreen(
                                     value = viewModel.reposicaoHora,
                                     onValueChange = { viewModel.onReposicaoHoraChange(it) },
                                     placeholder = { Text("13:30") },
+                                    trailingIcon = {
+                                        IconButton(onClick = { abrirSeletorHora(viewModel.reposicaoHora) { viewModel.onReposicaoHoraChange(it) } }) {
+                                            Icon(Icons.Default.Schedule, contentDescription = "Selecionar horário", tint = IfGreen)
+                                        }
+                                    },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth()
                                 )
